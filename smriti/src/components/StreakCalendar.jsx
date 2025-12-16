@@ -1,26 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, parseISO } from 'date-fns';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { useAuth } from '../context/AuthContext';
 
 const StreakCalendar = () => {
+  const { currentUser } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [journalDates, setJournalDates] = useState({});
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadJournalData();
-  }, [currentDate]);
+    if (currentUser) {
+      loadJournalData();
+    }
+  }, [currentDate, currentUser]);
 
   const loadJournalData = async () => {
     try {
-      setLoading(true);
       const start = format(startOfMonth(currentDate), 'yyyy-MM-dd');
       const end = format(endOfMonth(currentDate), 'yyyy-MM-dd');
 
       const journalsRef = collection(db, 'journals');
-      const q = query(journalsRef, where('date', '>=', start), where('date', '<=', end));
+      const q = query(
+        journalsRef,
+        where('userId', '==', currentUser.uid),
+        where('date', '>=', start),
+        where('date', '<=', end)
+      );
       const snapshot = await getDocs(q);
 
       const dates = {};
@@ -29,7 +36,6 @@ const StreakCalendar = () => {
         const journalDate = parseISO(data.date);
         const createdDate = data.createdAt?.toDate() || journalDate;
         
-        // Check if written on time (same day) or delayed
         const isOnTime = format(journalDate, 'yyyy-MM-dd') === format(createdDate, 'yyyy-MM-dd');
         dates[data.date] = isOnTime ? 'on-time' : 'delayed';
       });
@@ -37,15 +43,12 @@ const StreakCalendar = () => {
       setJournalDates(dates);
     } catch (error) {
       console.error('Error loading journal data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
   const firstDayOfWeek = monthStart.getDay();
   const emptyDays = Array(firstDayOfWeek).fill(null);
 
@@ -61,58 +64,77 @@ const StreakCalendar = () => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const today = format(new Date(), 'yyyy-MM-dd');
     
-    if (dateStr > today) return null; // Future dates
+    if (dateStr > today) return null;
     if (journalDates[dateStr]) return journalDates[dateStr];
     return 'missed';
   };
 
+  // const getDateColor = (status) => {
+  //   switch (status) {
+  //     case 'on-time':
+  //       return 'bg-green-500';
+  //     case 'delayed':
+  //       return 'bg-yellow-500';
+  //     case 'missed':
+  //       return 'bg-red-500';
+  //     default:
+  //       return 'bg-gray-200 dark:bg-gray-700';
+  //   }
+  // };
+
+
   const getDateColor = (status) => {
-    switch (status) {
-      case 'on-time':
-        return 'bg-green-500';
-      case 'delayed':
-        return 'bg-yellow-500';
-      case 'missed':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-300 dark:bg-gray-700';
-    }
-  };
+  switch (status) {
+    case 'on-time':
+      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+
+    case 'delayed':
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+
+    case 'missed':
+      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+
+    default:
+      return 'bg-[#f3f3f1] text-gray-700 dark:bg-[#1f1f1f] dark:text-gray-300';
+  }
+};
+
+
 
   return (
-    <div className="glass rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold">Journal Streak Calendar</h3>
-        <div className="flex items-center space-x-4">
+    <div className="card p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold">Journal Calendar</h3>
+        <div className="flex items-center space-x-2">
           <button
             onClick={previousMonth}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="font-medium min-w-[120px] text-center">
-            {format(currentDate, 'MMMM yyyy')}
+          <span className="text-xs font-medium min-w-[100px] text-center">
+            {format(currentDate, 'MMM yyyy')}
           </span>
           <button
             onClick={nextMonth}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Weekday headers */}
-      <div className="grid grid-cols-7 gap-2 mb-2">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="text-center text-xs font-medium text-gray-500 dark:text-gray-400">
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
+          <div key={idx} className="text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 py-1">
             {day}
           </div>
         ))}
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-1">
         {emptyDays.map((_, idx) => (
           <div key={`empty-${idx}`} />
         ))}
@@ -123,12 +145,12 @@ const StreakCalendar = () => {
           return (
             <div
               key={date.toString()}
-              className={`aspect-square flex items-center justify-center rounded-lg text-sm relative ${
-                isCurrentDay ? 'ring-2 ring-purple-500' : ''
+              className={`aspect-square flex items-center justify-center rounded text-[11px] relative ${
+                isCurrentDay ? 'ring-1 ring-gray-400 dark:ring-gray-500' : ''
               }`}
             >
               <div
-                className={`w-full h-full flex items-center justify-center rounded-lg ${getDateColor(status)}`}
+                className={`w-full h-full flex items-center justify-center rounded ${getDateColor(status)}`}
               >
                 <span className={status ? 'text-white font-medium' : 'text-gray-600 dark:text-gray-400'}>
                   {format(date, 'd')}
@@ -140,18 +162,18 @@ const StreakCalendar = () => {
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center justify-center gap-4 mt-6 text-xs">
-        <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 rounded bg-green-500" />
-          <span>On Time</span>
+      <div className="flex items-center justify-center gap-3 mt-4 text-[10px]">
+        <div className="flex items-center space-x-1">
+          <div className="w-2 h-2 rounded-full bg-green-500" />
+          <span className="text-gray-600 dark:text-gray-400">On Time</span>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 rounded bg-yellow-500" />
-          <span>Delayed</span>
+        <div className="flex items-center space-x-1">
+          <div className="w-2 h-2 rounded-full bg-yellow-500" />
+          <span className="text-gray-600 dark:text-gray-400">Delayed</span>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 rounded bg-red-500" />
-          <span>Missed</span>
+        <div className="flex items-center space-x-1">
+          <div className="w-2 h-2 rounded-full bg-red-500" />
+          <span className="text-gray-600 dark:text-gray-400">Missed</span>
         </div>
       </div>
     </div>

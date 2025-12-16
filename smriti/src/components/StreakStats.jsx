@@ -1,25 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, Trophy, Target } from 'lucide-react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { format, parseISO, differenceInDays } from 'date-fns';
+import { useAuth } from '../context/AuthContext';
 
 const StreakStats = () => {
+  const { currentUser } = useAuth();
   const [stats, setStats] = useState({
     currentStreak: 0,
     longestStreak: 0,
     totalJournals: 0,
-    missedDays: 0,
   });
 
   useEffect(() => {
-    calculateStats();
-  }, []);
+    if (currentUser) {
+      calculateStats();
+    }
+  }, [currentUser]);
 
   const calculateStats = async () => {
     try {
       const journalsRef = collection(db, 'journals');
-      const q = query(journalsRef, orderBy('date', 'desc'));
+      const q = query(
+        journalsRef, 
+        where('userId', '==', currentUser.uid),
+        orderBy('date', 'desc')
+      );
       const snapshot = await getDocs(q);
 
       if (snapshot.empty) {
@@ -31,7 +37,6 @@ const StreakStats = () => {
         ...doc.data(),
       }));
 
-      // Calculate current streak
       let currentStreak = 0;
       const today = format(new Date(), 'yyyy-MM-dd');
       const sortedDates = [...new Set(journals.map(j => j.date))].sort().reverse();
@@ -49,7 +54,6 @@ const StreakStats = () => {
         }
       }
 
-      // Calculate longest streak
       let longestStreak = 0;
       let tempStreak = 1;
       for (let i = 0; i < sortedDates.length - 1; i++) {
@@ -63,16 +67,10 @@ const StreakStats = () => {
       }
       longestStreak = Math.max(longestStreak, tempStreak, currentStreak);
 
-      // Calculate missed days (from first journal to today)
-      const firstJournalDate = parseISO(sortedDates[sortedDates.length - 1]);
-      const daysSinceFirst = differenceInDays(new Date(), firstJournalDate) + 1;
-      const missedDays = daysSinceFirst - sortedDates.length;
-
       setStats({
         currentStreak,
         longestStreak,
         totalJournals: journals.length,
-        missedDays: Math.max(0, missedDays),
       });
     } catch (error) {
       console.error('Error calculating stats:', error);
@@ -81,37 +79,28 @@ const StreakStats = () => {
 
   const statCards = [
     {
-      icon: Flame,
       label: 'Current Streak',
       value: stats.currentStreak,
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-500/10',
+      color: 'text-orange-600 dark:text-orange-400',
     },
     {
-      icon: Trophy,
       label: 'Longest Streak',
       value: stats.longestStreak,
-      color: 'text-yellow-500',
-      bgColor: 'bg-yellow-500/10',
+      color: 'text-blue-600 dark:text-blue-400',
     },
     {
-      icon: Target,
       label: 'Total Journals',
       value: stats.totalJournals,
-      color: 'text-purple-500',
-      bgColor: 'bg-purple-500/10',
+      color: 'text-purple-600 dark:text-purple-400',
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {statCards.map(({ icon: Icon, label, value, color, bgColor }) => (
-        <div key={label} className="glass rounded-2xl p-6">
-          <div className={`w-12 h-12 ${bgColor} rounded-xl flex items-center justify-center mb-4`}>
-            <Icon className={`w-6 h-6 ${color}`} />
-          </div>
-          <div className="text-3xl font-bold mb-1">{value}</div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">{label}</div>
+    <div className="space-y-2">
+      {statCards.map(({ label, value, color }) => (
+        <div key={label} className="card p-3">
+          <div className={`text-2xl font-semibold mb-0.5 ${color}`}>{value}</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400">{label}</div>
         </div>
       ))}
     </div>

@@ -6,11 +6,13 @@ import { db } from '../firebase/config';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { useSettings } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
 
 const JournalEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { settings } = useSettings();
+  const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -21,10 +23,10 @@ const JournalEditor = () => {
   });
 
   useEffect(() => {
-    if (id) {
+    if (id && currentUser) {
       loadJournal();
     }
-  }, [id]);
+  }, [id, currentUser]);
 
   const loadJournal = async () => {
     try {
@@ -32,6 +34,11 @@ const JournalEditor = () => {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
+        if (data.userId !== currentUser.uid) {
+          toast.error('Unauthorized');
+          navigate('/journals');
+          return;
+        }
         setFormData({
           title: data.title,
           content: data.content,
@@ -68,16 +75,17 @@ const JournalEditor = () => {
     try {
       const journalData = {
         ...formData,
+        userId: currentUser.uid,
         updatedAt: serverTimestamp(),
       };
 
       if (id) {
         await updateDoc(doc(db, 'journals', id), journalData);
-        toast.success('Journal updated successfully! 📝');
+        toast.success('Journal updated');
       } else {
         journalData.createdAt = serverTimestamp();
         await addDoc(collection(db, 'journals'), journalData);
-        toast.success('Journal created successfully! 🎉');
+        toast.success('Journal created');
       }
       
       navigate('/journals');
@@ -96,60 +104,73 @@ const JournalEditor = () => {
     });
   };
 
+  const getMoodColor = (mood) => {
+    if (mood?.includes('Happy')) return '#dcfce7';
+    if (mood?.includes('Calm')) return '#dbeafe';
+    if (mood?.includes('Sad')) return '#fef3c7';
+    if (mood?.includes('Anxious')) return '#fee2e2';
+    if (mood?.includes('Angry')) return '#fecaca';
+    if (mood?.includes('Thoughtful')) return '#e9d5ff';
+    if (mood?.includes('Tired')) return '#f3f4f6';
+    if (mood?.includes('Excited')) return '#fef9c3';
+    return '#f3f4f6';
+  };
+
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => navigate('/journals')}
-          className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
+          className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
         >
-          <ArrowLeft className="w-5 h-5" />
-          <span>Back to Journals</span>
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back</span>
         </button>
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className="flex items-center space-x-2 px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center space-x-1.5 px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50"
         >
-          <Save className="w-5 h-5" />
+          <Save className="w-4 h-4" />
           <span>{loading ? 'Saving...' : id ? 'Update' : 'Save'}</span>
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* Date, Time, and Mood */}
-        <div className="glass rounded-2xl p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="card p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-2">Date</label>
+              <label className="block text-xs font-medium mb-1">Date</label>
               <input
                 type="date"
                 name="date"
                 value={formData.date}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                className="w-full px-3 py-2 text-sm rounded bg-white dark:bg-[#2c2c2c] border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-500"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Time</label>
+              <label className="block text-xs font-medium mb-1">Time</label>
               <input
                 type="time"
                 name="time"
                 value={formData.time}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                className="w-full px-3 py-2 text-sm rounded bg-white dark:bg-[#2c2c2c] border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-500"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Mood</label>
+              <label className="block text-xs font-medium mb-1">Mood</label>
               <select
                 name="mood"
                 value={formData.mood}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                className="w-full px-3 py-2 text-sm rounded bg-white dark:bg-[#2c2c2c] border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-500"
+                style={formData.mood ? { backgroundColor: getMoodColor(formData.mood), color: '#000' } : {}}
                 required
               >
                 <option value="">Select mood</option>
@@ -162,48 +183,34 @@ const JournalEditor = () => {
         </div>
 
         {/* Title */}
-        <div className="glass rounded-2xl p-6">
-          <label className="block text-sm font-medium mb-2">Title</label>
+        <div className="card p-4">
           <input
             type="text"
             name="title"
             value={formData.title}
             onChange={handleChange}
-            placeholder="Give your journal a title..."
-            className="w-full px-4 py-3 text-xl font-semibold rounded-lg bg-transparent border-none outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+            placeholder="Journal title..."
+            className="w-full text-xl font-semibold bg-transparent outline-none"
             required
           />
         </div>
 
-        {/* Content - Markdown Editor */}
-        <div className="glass rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <label className="block text-sm font-medium">Content</label>
-            <span className="text-xs text-gray-500">Markdown supported</span>
-          </div>
+        {/* Content */}
+        <div className="card p-4">
           <textarea
             name="content"
             value={formData.content}
             onChange={handleChange}
-            placeholder="Write your thoughts here... 
+            placeholder="Write your thoughts...
 
-You can use:
+Markdown supported:
 # Heading
-**bold** and *italic*
+**bold** *italic*
 - Lists
 > Quotes"
-            className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 outline-none focus:ring-2 focus:ring-purple-500 transition-all min-h-[400px] resize-y font-mono text-sm"
+            className="w-full bg-transparent outline-none min-h-[400px] resize-y text-sm font-mono leading-relaxed"
             required
           />
-          <div className="mt-4 text-xs text-gray-500">
-            <p className="mb-1">💡 Quick Tips:</p>
-            <ul className="list-disc list-inside space-y-1">
-              <li>Use # for headings (# H1, ## H2, ### H3)</li>
-              <li>Use **text** for bold and *text* for italic</li>
-              <li>Use - or * for bullet lists</li>
-              <li>Use > for blockquotes</li>
-            </ul>
-          </div>
         </div>
 
         {/* Mobile Save Button */}
@@ -211,9 +218,9 @@ You can use:
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center space-x-2 px-6 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center space-x-1.5 px-4 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded text-sm font-medium disabled:opacity-50"
           >
-            <Save className="w-5 h-5" />
+            <Save className="w-4 h-4" />
             <span>{loading ? 'Saving...' : id ? 'Update Journal' : 'Save Journal'}</span>
           </button>
         </div>

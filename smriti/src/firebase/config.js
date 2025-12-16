@@ -1,8 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
-// TODO: Replace with your Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyAr6Dvv6kNHhn75sAQ9PC9fhybhZqvfkUU",
   authDomain: "smriti-7b67f.firebaseapp.com",
@@ -13,13 +13,11 @@ const firebaseConfig = {
   measurementId: "G-VBYYWLV6VW"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore
 export const db = getFirestore(app);
+export const auth = getAuth(app);
 
-// Initialize Firebase Cloud Messaging
 let messaging = null;
 try {
   if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {

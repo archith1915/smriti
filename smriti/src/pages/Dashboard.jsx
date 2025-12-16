@@ -1,39 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, BookOpen, CheckSquare, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Edit } from 'lucide-react';
 import StreakStats from '../components/StreakStats';
 import StreakCalendar from '../components/StreakCalendar';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { format } from 'date-fns';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
+  const { currentUser } = useAuth();
   const [recentJournals, setRecentJournals] = useState([]);
   const [todayTasks, setTodayTasks] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (currentUser) {
+      loadDashboardData();
+    }
+  }, [currentUser]);
 
   const loadDashboardData = async () => {
     try {
+      const userId = currentUser.uid;
+
       // Load recent journals
       const journalsRef = collection(db, 'journals');
-      const journalsQuery = query(journalsRef, orderBy('createdAt', 'desc'), limit(3));
+      const journalsQuery = query(
+        journalsRef,
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc'),
+        limit(5)
+      );
       const journalsSnapshot = await getDocs(journalsQuery);
       setRecentJournals(journalsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
       // Load today's tasks
       const today = format(new Date(), 'yyyy-MM-dd');
       const tasksRef = collection(db, 'tasks');
-      const tasksQuery = query(tasksRef, where('dueDate', '==', today), where('status', '!=', 'completed'));
+      const tasksQuery = query(
+        tasksRef,
+        where('userId', '==', userId),
+        where('dueDate', '==', today),
+        where('status', '!=', 'completed')
+      );
       const tasksSnapshot = await getDocs(tasksQuery);
       setTodayTasks(tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
       // Load upcoming events
       const eventsRef = collection(db, 'events');
-      const eventsQuery = query(eventsRef, where('date', '>=', today), orderBy('date'), limit(3));
+      const eventsQuery = query(
+        eventsRef,
+        where('userId', '==', userId),
+        where('date', '>=', today),
+        orderBy('date'),
+        limit(5)
+      );
       const eventsSnapshot = await getDocs(eventsQuery);
       setUpcomingEvents(eventsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (error) {
@@ -42,134 +64,141 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Welcome back! 👋</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Here's what's happening with your journey today.
-          </p>
-        </div>
-        <Link
-          to="/journals/new"
-          className="flex items-center space-x-2 px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all shadow-lg hover:shadow-xl"
-        >
-          <Plus className="w-5 h-5" />
-          <span>New Journal</span>
-        </Link>
-      </div>
-
-      {/* Streak Stats */}
-      <StreakStats />
-
-      {/* Streak Calendar */}
-      <StreakCalendar />
-
-      {/* Quick Overview Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Journals */}
-        <div className="glass rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold flex items-center">
-              <BookOpen className="w-5 h-5 mr-2 text-purple-500" />
-              Recent Journals
-            </h3>
-            <Link to="/journals" className="text-sm text-purple-600 hover:text-purple-700">
-              View all
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Main Content */}
+        <div className="flex-1 space-y-6">
+          {/* Header */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-semibold mb-1">Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}.</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {format(new Date(), 'EEEE, MMMM d, yyyy')}
+              </p>
+            </div>
+            <Link
+              to="/journals/new"
+              className="flex items-center space-x-1.5 px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Journal</span>
             </Link>
           </div>
-          {recentJournals.length === 0 ? (
-            <p className="text-gray-500 text-sm">No journals yet. Start writing!</p>
-          ) : (
-            <div className="space-y-3">
-              {recentJournals.map(journal => (
+
+          {/* Recent Journals */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold">Recent Journals</h2>
+              <Link to="/journals" className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
+                View all
+              </Link>
+            </div>
+            {recentJournals.length === 0 ? (
+              <div className="card p-8 text-center">
+                <p className="text-sm text-gray-500 mb-3">No journals yet. Start writing!</p>
                 <Link
-                  key={journal.id}
-                  to={`/journals/view/${journal.id}`}
-                  className="block p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                  to="/journals/new"
+                  className="inline-flex items-center space-x-1.5 px-4 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded text-sm font-medium"
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium truncate">{journal.title}</span>
-                    <span className="text-xs">{journal.mood}</span>
-                  </div>
-                  <p className="text-xs text-gray-500">{journal.date}</p>
+                  <Plus className="w-4 h-4" />
+                  <span>Create First Journal</span>
                 </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Today's Tasks */}
-        <div className="glass rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold flex items-center">
-              <CheckSquare className="w-5 h-5 mr-2 text-green-500" />
-              Today's Tasks
-            </h3>
-            <Link to="/tasks" className="text-sm text-purple-600 hover:text-purple-700">
-              View all
-            </Link>
-          </div>
-          {todayTasks.length === 0 ? (
-            <p className="text-gray-500 text-sm">No tasks for today! 🎉</p>
-          ) : (
-            <div className="space-y-3">
-              {todayTasks.map(task => (
-                <div
-                  key={task.id}
-                  className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{task.title}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {task.dueTime || 'No time set'}
-                      </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {recentJournals.map(journal => (
+                  <Link
+                    key={journal.id}
+                    to={`/journals/view/${journal.id}`}
+                    className="block card p-3 hover-bg"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-medium truncate mb-1">{journal.title}</h3>
+                        <p className="text-xs text-gray-500">{journal.date}</p>
+                      </div>
+                      <div className="flex items-center space-x-2 ml-3">
+                        <span className="text-xs px-2 py-0.5 rounded" style={{
+                          backgroundColor: journal.mood === '😊 Happy' ? '#dcfce7' :
+                                         journal.mood === '😌 Calm' ? '#dbeafe' :
+                                         journal.mood === '😔 Sad' ? '#fef3c7' :
+                                         journal.mood === '😰 Anxious' ? '#fee2e2' :
+                                         '#f3f4f6',
+                          color: '#000'
+                        }}>
+                          {journal.mood?.split(' ')[0]}
+                        </span>
+                      </div>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      task.status === 'in-progress'
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                        : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                    }`}>
-                      {task.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Today's Tasks */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold">Today's Tasks</h2>
+              <Link to="/tasks" className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
+                View all
+              </Link>
             </div>
-          )}
+            {todayTasks.length === 0 ? (
+              <div className="card p-4 text-center">
+                <p className="text-sm text-gray-500">No tasks for today</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {todayTasks.map(task => (
+                  <div key={task.id} className="card p-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{task.title}</p>
+                        <p className="text-xs text-gray-500 mt-1">{task.dueTime || 'No time set'}</p>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded" style={{
+                        backgroundColor: task.status === 'in-progress' ? '#dbeafe' : '#f3f4f6',
+                        color: '#000'
+                      }}>
+                        {task.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Upcoming Events */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold">Upcoming Events</h2>
+              <Link to="/calendar" className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
+                View all
+              </Link>
+            </div>
+            {upcomingEvents.length === 0 ? (
+              <div className="card p-4 text-center">
+                <p className="text-sm text-gray-500">No upcoming events</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {upcomingEvents.map(event => (
+                  <div key={event.id} className="card p-3">
+                    <p className="text-sm font-medium">{event.title}</p>
+                    <p className="text-xs text-gray-500 mt-1">{event.date} {event.time && `• ${event.time}`}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Upcoming Events */}
-        <div className="glass rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold flex items-center">
-              <CalendarIcon className="w-5 h-5 mr-2 text-blue-500" />
-              Upcoming Events
-            </h3>
-            <Link to="/calendar" className="text-sm text-purple-600 hover:text-purple-700">
-              View all
-            </Link>
-          </div>
-          {upcomingEvents.length === 0 ? (
-            <p className="text-gray-500 text-sm">No upcoming events.</p>
-          ) : (
-            <div className="space-y-3">
-              {upcomingEvents.map(event => (
-                <div
-                  key={event.id}
-                  className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800"
-                >
-                  <p className="text-sm font-medium">{event.title}</p>
-                  <p className="text-xs text-gray-500 mt-1">{event.date}</p>
-                  <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 mt-2 inline-block">
-                    {event.category}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+        {/* Right Sidebar - Widgets */}
+        <div className="lg:w-64 space-y-4">
+          <StreakStats />
+          <StreakCalendar />
         </div>
       </div>
     </div>

@@ -86,19 +86,37 @@ const StreakCalendar = () => {
   const getDateColor = (status) => {
   switch (status) {
     case 'on-time':
-      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      return 'bg-green-100 text-green-800 dark:bg-green-500/30 dark:text-green-300';
 
     case 'delayed':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/30 dark:text-yellow-300';
 
     case 'missed':
-      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      return 'bg-red-100 text-red-800 dark:bg-red-700/30 dark:text-red-300';
 
     default:
       return 'bg-[#f3f3f1] text-gray-700 dark:bg-[#1f1f1f] dark:text-gray-300';
   }
 };
 
+//Colors with borders
+
+
+// const getDateColor = (status) => {
+//   switch (status) {
+//     case 'on-time':
+//       return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-600';
+
+//     case 'delayed':
+//       return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border dark:border-yellow-600';
+
+//     case 'missed':
+//       return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border border-red-900';
+
+//     default:
+//       return 'bg-[#f3f3f1] text-gray-700 dark:bg-[#1f1f1f] dark:text-gray-300';
+//   }
+// };
 
 
   return (

@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import Loader from '../components/Loader';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // ✅ Correctly placed inside component
+  
   const { signup, login } = useAuth();
   const navigate = useNavigate();
 
@@ -46,6 +48,9 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  // ✅ Conditional Return: Placed AFTER all hooks are defined
+  if (loading) return <Loader />;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#191919] px-4">
@@ -99,12 +104,12 @@ const Auth = () => {
         <div className="mt-6 text-center">
           <button
             onClick={() => setIsLogin(!isLogin)}
-            className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+            className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 block mx-auto mb-4"
           >
-            {/* {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'} */}
-            
+             {/* Uncomment below if you want to allow switching, currently seems hidden by design? */}
+             {/* {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'} */}
           </button>
-          <span className='text-gray-500'><strong>Smriti</strong> is currently invite only.</span>
+          <span className='text-gray-500 text-xs'><strong>Smriti</strong> is currently invite only.</span>
         </div>
       </div>
     </div>

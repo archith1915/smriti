@@ -16,11 +16,12 @@ import { db } from '../firebase/config';
 import toast from 'react-hot-toast';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
+import Loader from '../components/Loader';
 
 const Tasks = () => {
   const { currentUser } = useAuth();
   const { settings } = useSettings();
-
+  const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,9 +71,11 @@ const Tasks = () => {
         };
       });
       setTasks(list);
+      setLoading(false);
     }, (error) => {
       console.error('Error listening to tasks:', error);
       toast.error('Failed to sync tasks');
+      setLoading(false);
     });
 
     // 3. Cleanup on unmount
@@ -231,6 +234,8 @@ const Tasks = () => {
   };
 
   /* ---------------- RENDER ---------------- */
+
+  if (loading) return <Loader />;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -440,7 +445,7 @@ const Tasks = () => {
                     type="date"
                     value={formData.dueDate}
                     onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                    className="w-full px-3 py-2 text-sm rounded bg-white dark:bg-[#2c2c2c] border border-gray-200 dark:border-gray-700 outline-none"
+                    className="w-full px-3 py-2 text-sm rounded bg-white dark:bg-[#2c2c2c] border border-gray-200 dark:border-gray-700 outline-none dark:[color-scheme:dark]"
                   />
                 </div>
 
@@ -450,7 +455,7 @@ const Tasks = () => {
                     type="time"
                     value={formData.dueTime}
                     onChange={(e) => setFormData({ ...formData, dueTime: e.target.value })}
-                    className="w-full px-3 py-2 text-sm rounded bg-white dark:bg-[#2c2c2c] border border-gray-200 dark:border-gray-700 outline-none"
+                    className="w-full px-3 py-2 text-sm rounded bg-white dark:bg-[#2c2c2c] border border-gray-200 dark:border-gray-700 outline-none dark:[color-scheme:dark]"
                   />
                 </div>
               </div>

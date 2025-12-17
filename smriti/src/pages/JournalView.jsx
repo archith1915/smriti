@@ -6,6 +6,7 @@ import { db } from '../firebase/config';
 import ReactMarkdown from 'react-markdown';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import Loader from '../components/Loader';
 
 const JournalView = () => {
   const { id } = useParams();
@@ -14,7 +15,7 @@ const JournalView = () => {
   const [journal, setJournal] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // --- LIVE DOCUMENT LISTENER ---
+  // --- LIVE LISTENER ---
   useEffect(() => {
     if (!currentUser || !id) return;
 
@@ -25,7 +26,6 @@ const JournalView = () => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         
-        // Security check
         if (data.userId !== currentUser.uid) {
           toast.error('Unauthorized');
           navigate('/journals');
@@ -33,18 +33,10 @@ const JournalView = () => {
         }
         
         setJournal({ id: docSnap.id, ...data });
-      } else {
-        // Document deleted or doesn't exist
-        // Only show error if we weren't the ones who just deleted it (loading check helps)
-        if (!loading) { 
-            // Optional: toast.error('Journal not found');
-            // navigate('/journals');
-        }
       }
       setLoading(false);
     }, (error) => {
       console.error("Error fetching journal:", error);
-      toast.error("Failed to load journal");
       setLoading(false);
     });
 
@@ -76,15 +68,7 @@ const JournalView = () => {
     return '#f3f4f6';
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <Loader />;
 
   if (!journal) return null;
 
@@ -94,7 +78,7 @@ const JournalView = () => {
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => navigate('/journals')}
-          className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+          className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back</span>
@@ -102,14 +86,14 @@ const JournalView = () => {
         <div className="flex items-center space-x-2">
           <Link
             to={`/journals/edit/${id}`}
-            className="flex items-center space-x-1 px-3 py-1.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded text-sm font-medium"
+            className="flex items-center space-x-1 px-3 py-1.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
           >
             <Edit className="w-3.5 h-3.5" />
             <span>Edit</span>
           </Link>
           <button
             onClick={handleDelete}
-            className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600"
+            className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 transition-colors"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -131,10 +115,10 @@ const JournalView = () => {
         </div>
 
         {/* Title */}
-        <h1 className="text-3xl font-bold mb-6">{journal.title}</h1>
+        <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">{journal.title}</h1>
 
         {/* Content */}
-        <div className="prose prose-sm dark:prose-invert max-w-none markdown-content">
+        <div className="prose prose-sm dark:prose-invert max-w-none markdown-content leading-relaxed text-gray-700 dark:text-gray-300">
           <ReactMarkdown>{journal.content}</ReactMarkdown>
         </div>
       </article>

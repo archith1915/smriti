@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Moon, Sun, BookOpen, CheckSquare, Calendar, Settings, Menu, X, LogOut, Home } from 'lucide-react';
+import { Moon, Sun, BookOpen, CheckSquare, Calendar, Settings, Menu, X, LogOut, Home, StickyNote, Timer } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -15,8 +15,10 @@ const Navbar = () => {
   const navItems = [
     {path: '/', label: 'Dashboard', icon: Home},
     { path: '/journals', label: 'Journals', icon: BookOpen },
+    { path: '/notes', label: 'Notes', icon: StickyNote },
     { path: '/tasks', label: 'Tasks', icon: CheckSquare },
     { path: '/calendar', label: 'Calendar', icon: Calendar },
+    {path: '/timers', label: 'Timers', icon: Timer},
     { path: '/settings', label: 'Settings', icon: Settings },
   ];
 

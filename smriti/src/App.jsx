@@ -14,6 +14,8 @@ import { ThemeProvider } from './context/ThemeContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTheme } from './context/ThemeContext';
+import Notes from './pages/Notes';
+import Timers from './pages/Timers';
 
 const PrivateRoute = ({ children }) => {
   const { currentUser } = useAuth();
@@ -40,6 +42,8 @@ const AppContent = () => {
           <Route path="/journals/view/:id" element={<PrivateRoute><JournalView /></PrivateRoute>} />
           <Route path="/tasks" element={<PrivateRoute><Tasks /></PrivateRoute>} />
           <Route path="/calendar" element={<PrivateRoute><Calendar /></PrivateRoute>} />
+          <Route path="/notes" element={<PrivateRoute><Notes /></PrivateRoute>} />
+  <Route path="/timers" element={<PrivateRoute><Timers /></PrivateRoute>} />
           <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

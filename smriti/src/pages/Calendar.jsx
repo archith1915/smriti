@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { jsPDF } from 'jspdf';
+import Loader from '../components/Loader';
 
 const Calendar = () => {
   const { currentUser } = useAuth();
@@ -31,6 +32,16 @@ const Calendar = () => {
   const [jumpMonth, setJumpMonth] = useState(currentDate.getMonth());
   const [jumpYear, setJumpYear] = useState(currentDate.getFullYear());
 
+  // --- LOADER STATE ---
+  const [loading, setLoading] = useState(true);
+  const [loadStatus, setLoadStatus] = useState({ events: false, tasks: false });
+
+  useEffect(() => {
+    if (loadStatus.events && loadStatus.tasks) {
+      setLoading(false);
+    }
+  }, [loadStatus]);
+
   // --- LIVE DATA LISTENERS ---
   useEffect(() => {
     if (!currentUser) return;
@@ -46,23 +57,31 @@ const Calendar = () => {
         type: 'event',
       }));
       setEvents(list);
-    }, (error) => console.error("Events sync error:", error));
+      setLoadStatus(prev => ({ ...prev, events: true }));
+    }, (error) => {
+      console.error("Events sync error:", error);
+      setLoadStatus(prev => ({ ...prev, events: true }));
+    });
 
     // 2. Tasks Listener
     const tasksQuery = query(collection(db, 'tasks'), where('userId', '==', userId));
     const unsubTasks = onSnapshot(tasksQuery, (snapshot) => {
       const list = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data(), type: 'task' }))
-        .filter(task => task.dueDate); // Filter client-side or use a composite index
+        .filter(task => task.dueDate); 
       setTasks(list);
-    }, (error) => console.error("Tasks sync error:", error));
+      setLoadStatus(prev => ({ ...prev, tasks: true }));
+    }, (error) => {
+      console.error("Tasks sync error:", error);
+      setLoadStatus(prev => ({ ...prev, tasks: true }));
+    });
 
     // Cleanup
     return () => {
       unsubEvents();
       unsubTasks();
     };
-  }, [currentUser]); // Run only on mount/user change
+  }, [currentUser]); 
 
   // Sync Jump controls
   useEffect(() => {
@@ -147,7 +166,7 @@ const Calendar = () => {
       const dateStr = format(selectedDate, 'EEEE, MMMM d, yyyy');
 
       // --- HEADER ---
-      doc.setFillColor(26, 26, 26);
+      doc.setFillColor(15, 15, 15); // Almost Black
       doc.rect(0, 0, 210, 30, 'F');
       
       doc.setTextColor(255, 255, 255);
@@ -160,6 +179,7 @@ const Calendar = () => {
       doc.text(dateStr, 15, 25);
       
       doc.setFontSize(10);
+      doc.setTextColor(200, 200, 200);
       doc.text("Smriti App", 180, 18);
 
       // --- CONTENT ---
@@ -196,10 +216,10 @@ const Calendar = () => {
           }
 
           if (isTask) {
-             doc.setFillColor(255, 251, 235);
+             doc.setFillColor(66, 48, 20);
              doc.setDrawColor(245, 158, 11); 
           } else {
-             doc.setFillColor(239, 246, 255);
+             doc.setFillColor(20, 40, 70);
              doc.setDrawColor(59, 130, 246);
           }
 
@@ -208,7 +228,7 @@ const Calendar = () => {
           doc.setFillColor(isTask ? 245 : 59, isTask ? 158 : 130, isTask ? 11 : 246);
           doc.rect(margin, yPos, 2, cardHeight, 'F');
 
-          doc.setTextColor(80);
+          doc.setTextColor(200, 200, 200);
           doc.setFontSize(9);
           doc.setFont("helvetica", "bold");
           doc.text(time, margin + 6, yPos + 8);
@@ -217,12 +237,12 @@ const Calendar = () => {
           doc.setFont("helvetica", "normal");
           doc.text(category, margin + cardWidth - 5, yPos + 8, { align: 'right' });
 
-          doc.setTextColor(0);
+          doc.setTextColor(255, 255, 255);
           doc.setFontSize(13);
           doc.setFont("helvetica", "bold");
           doc.text(title, margin + 6, yPos + 16);
 
-          doc.setTextColor(100);
+          doc.setTextColor(180, 180, 180);
           doc.setFontSize(10);
           doc.setFont("helvetica", "normal");
           doc.text(descLines, margin + 6, yPos + 22);
@@ -231,7 +251,7 @@ const Calendar = () => {
         });
       }
 
-      doc.save(`Schedule for ${format(selectedDate, 'yyyy-MM-dd')}.pdf`);
+      doc.save(`Schedule_${format(selectedDate, 'yyyy-MM-dd')}.pdf`);
       toast.success('Schedule downloaded');
     } catch (error) {
       console.error('Error downloading PDF:', error);
@@ -332,6 +352,8 @@ const Calendar = () => {
       }
     }
   };
+
+  if (loading) return <Loader />;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -579,7 +601,7 @@ const Calendar = () => {
                     type="date"
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full px-3 py-2 text-sm rounded bg-white dark:bg-[#2c2c2c] border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-500"
+                    className="w-full px-3 py-2 text-sm rounded bg-white dark:bg-[#2c2c2c] border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-500 dark:[color-scheme:dark]"
                     required
                   />
                 </div>
@@ -589,7 +611,7 @@ const Calendar = () => {
                     type="time"
                     value={formData.time}
                     onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                    className="w-full px-3 py-2 text-sm rounded bg-white dark:bg-[#2c2c2c] border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-500"
+                    className="w-full px-3 py-2 text-sm rounded bg-white dark:bg-[#2c2c2c] border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-500 dark:[color-scheme:dark]"
                   />
                 </div>
               </div>
@@ -645,7 +667,7 @@ const Calendar = () => {
                     type="date"
                     value={formData.recurringEndDate}
                     onChange={(e) => setFormData({ ...formData, recurringEndDate: e.target.value })}
-                    className="w-full px-3 py-2 text-sm rounded bg-white dark:bg-[#2c2c2c] border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-500"
+                    className="w-full px-3 py-2 text-sm rounded bg-white dark:bg-[#2c2c2c] border border-gray-200 dark:border-gray-700 outline-none focus:border-gray-400 dark:focus:border-gray-500 dark:[color-scheme:dark]"
                   />
                 </div>
               )}

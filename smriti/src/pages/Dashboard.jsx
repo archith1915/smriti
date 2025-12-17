@@ -7,18 +7,24 @@ import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/f
 import { db } from '../firebase/config';
 import { format } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
-
-const formatStatus = (status = '') => {
-    return status
-      .replace('-', ' ')
-      .replace(/\b\w/g, char => char.toUpperCase());
-  };
+import Loader from '../components/Loader';
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
   const [recentJournals, setRecentJournals] = useState([]);
   const [todayTasks, setTodayTasks] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
+  
+  // Loading State tracking
+  const [loading, setLoading] = useState(true);
+  const [loadStatus, setLoadStatus] = useState({ journals: false, tasks: false, events: false });
+
+  useEffect(() => {
+    // Check if all parts are loaded
+    if (loadStatus.journals && loadStatus.tasks && loadStatus.events) {
+      setLoading(false);
+    }
+  }, [loadStatus]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -32,10 +38,11 @@ const Dashboard = () => {
       journalsRef,
       where('userId', '==', userId),
       orderBy('createdAt', 'desc'),
-      limit(3)
+      limit(5)
     );
     const unsubJournals = onSnapshot(journalsQuery, (snapshot) => {
       setRecentJournals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoadStatus(prev => ({ ...prev, journals: true }));
     });
 
     // 2. Live Today's Tasks
@@ -48,6 +55,7 @@ const Dashboard = () => {
     );
     const unsubTasks = onSnapshot(tasksQuery, (snapshot) => {
       setTodayTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoadStatus(prev => ({ ...prev, tasks: true }));
     });
 
     // 3. Live Upcoming Events
@@ -61,6 +69,7 @@ const Dashboard = () => {
     );
     const unsubEvents = onSnapshot(eventsQuery, (snapshot) => {
       setUpcomingEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoadStatus(prev => ({ ...prev, events: true }));
     });
 
     // Cleanup all listeners
@@ -71,8 +80,10 @@ const Dashboard = () => {
     };
   }, [currentUser]);
 
+  if (loading) return <Loader />;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-in fade-in duration-500">
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Main Content */}
         <div className="flex-1 space-y-6">
@@ -169,7 +180,7 @@ const Dashboard = () => {
                         backgroundColor: task.status === 'in-progress' ? '#dbeafe' : '#f3f4f6',
                         color: '#000'
                       }}>
-                        {formatStatus(task.status)}
+                        {task.status}
                       </span>
                     </div>
                   </div>

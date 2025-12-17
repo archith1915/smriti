@@ -1,0 +1,40 @@
+{
+  "short_name": "Smriti",
+  "name": "Smriti: Personal Journal & Planner",
+  "description": "A personal journal, task manager, and calendar app for productivity and mental wellness.",
+  "icons": [
+    {
+      "src": "https://i.ibb.co/QW575m7/smriti-logo.jpg",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://i.ibb.co/QW575m7/smriti-logo.jpg",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#191919",
+  "background_color": "#191919",
+  "orientation": "portrait",
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "1170x2532",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile Dashboard"
+    },
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop Dashboard"
+    }
+  ]
+}

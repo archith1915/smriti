@@ -196,7 +196,7 @@ const Settings = () => {
         </p>
       </div>
 
-      <Section title="Date & Time">
+      {/* <Section title="Date & Time">
         <div className="grid md:grid-cols-2 gap-4">
           <select
             value={formData.dateFormat}
@@ -217,7 +217,7 @@ const Settings = () => {
             <option value="24h">24 Hour</option>
           </select>
         </div>
-      </Section>
+      </Section> */}
 
       <Section title="Task Categories">
         <div className="flex flex-wrap gap-2 mb-3">

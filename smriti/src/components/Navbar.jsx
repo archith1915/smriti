@@ -67,7 +67,7 @@ const Navbar = () => {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-2">
-            <button
+            {/* <button
               onClick={toggleTheme}
               className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               aria-label="Toggle theme"
@@ -77,7 +77,7 @@ const Navbar = () => {
               ) : (
                 <Moon className="w-4 h-4 text-gray-600" />
               )}
-            </button>
+            </button> */}
 
             <button
               onClick={handleLogout}

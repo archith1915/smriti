@@ -231,7 +231,7 @@ const Calendar = () => {
         });
       }
 
-      doc.save(`Schedule_${format(selectedDate, 'yyyy-MM-dd')}.pdf`);
+      doc.save(`Schedule for ${format(selectedDate, 'yyyy-MM-dd')}.pdf`);
       toast.success('Schedule downloaded');
     } catch (error) {
       console.error('Error downloading PDF:', error);

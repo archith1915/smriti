@@ -10,24 +10,15 @@ class NotificationManagerClass {
   }
 
   async requestPermission(userId) {
-    if (!('Notification' in window)) {
-      console.log('This browser does not support notifications');
-      return;
-    }
-
-    if (!userId) {
-      console.log('Notification setup skipped: No User ID');
-      return;
-    }
+    if (!('Notification' in window)) return;
+    if (!userId) return;
 
     this.permission = await Notification.requestPermission();
     
     if (this.permission === 'granted' && messaging) {
       try {
-        // Explicitly register the service worker to avoid path issues
         const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
         
-        // Get the token using the VAPID key
         this.fcmToken = await getToken(messaging, {
           vapidKey: 'BHLLKgL6s9yMrkSB18Uy12vWguUemVI2nC3rjaYAbiHQjKZ7O-Hcm8bxqdJTAWok9Komtl8f9JWLdWUls4TuGrM', 
           serviceWorkerRegistration: registration,
@@ -35,10 +26,7 @@ class NotificationManagerClass {
 
         if (this.fcmToken) {
           console.log('FCM Token generated');
-          // Save the token linked to the specific USER ID
           await this.saveFCMToken(userId, this.fcmToken);
-          
-          // Start listening for messages while the app is open
           this.listenForForeground();
         }
       } catch (error) {
@@ -49,15 +37,12 @@ class NotificationManagerClass {
 
   async saveFCMToken(userId, token) {
     try {
-      // We save the document with the ID as the userId
-      // This allows the backend to find it easily: db.collection('fcmTokens').doc(userId)
       await setDoc(doc(db, 'fcmTokens', userId), {
         token,
-        userId: userId, // Explicitly saving userId as a field too for query safety
+        userId: userId,
         updatedAt: new Date(),
         device: navigator.userAgent
       });
-      console.log('Token saved to Firestore for user:', userId);
     } catch (error) {
       console.error('Error saving FCM token:', error);
     }
@@ -68,26 +53,31 @@ class NotificationManagerClass {
 
     onMessage(messaging, (payload) => {
       console.log('🔥 Foreground Message:', payload);
-      const { title, body } = payload.notification;
+      
+      const title = payload.data?.title || payload.notification?.title;
+      const body = payload.data?.body || payload.notification?.body;
 
-      // 1. Force a System Notification (Browser Level) if permission granted
-      // if (Notification.permission === 'granted') {
-      //   new Notification(title, {
-      //     body: body,
-      //     icon: '/smriti-logo.svg',
-      //   });
-      // }
+      // ✅ RESTORED: This is required for Data-Only messages to show up!
+      if (Notification.permission === 'granted') {
+        new Notification(title, {
+          body: body,
+          icon: '/smriti-logo.svg',
+          // Optional: Add click behavior here if needed to focus the window
+        });
+      }
 
-      // 2. Show a Toast inside the app (Fallback/Additional UI)
-      toast(body, { 
-        icon: '🔔',
-        duration: 5000,
-        style: {
-          border: '1px solid #333',
-          padding: '16px',
-          color: '#333',
-        },
-      });
+      // Also show the Toast (Visual feedback inside the app)
+      if (body) {
+        toast(body, { 
+          icon: '🔔',
+          duration: 5000,
+          style: {
+            border: '1px solid #333',
+            padding: '16px',
+            color: '#333',
+          },
+        });
+      }
     });
 
     this.isListening = true;

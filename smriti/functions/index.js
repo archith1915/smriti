@@ -245,15 +245,23 @@ exports.sendPendingNotifications = functions.scheduler.onSchedule(
       const tokens = tokensSnap.docs.map((t) => t.data().token);
 
       const message = {
-        notification: {
-          title: notif.title,
-          body: notif.body,
-        },
         data: {
-             // ⚡️ FIX: Ensure clicking opens the NEW site
-             url: 'https://arteccosmriti.netlify.app' 
+             title: notif.title,
+             body: notif.body,
+             url: 'https://arteccosmriti.netlify.app',
+             tag: notif.dedupKey || 'general'
         },
         tokens: tokens,
+        // ⚡️ FORCE HIGH PRIORITY ⚡️
+        android: {
+          priority: 'high',
+          ttl: 86400, // 24 hours time-to-live
+        },
+        webpush: {
+          headers: {
+            Urgency: 'high'
+          }
+        }
       };
 
       const sendPromise = (async () => {

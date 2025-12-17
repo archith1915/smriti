@@ -17,27 +17,40 @@ const messaging = firebase.messaging();
 
 // Handle background messages
 messaging.onBackgroundMessage((payload) => {
-  console.log('Received background message:', payload);
+  console.log('Background Message:', payload);
 
-  const notificationTitle = payload.notification.title;
+  // 1. Unpack data from payload.data (NOT payload.notification)
+  const { title, body, url, tag } = payload.data;
+
   const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/smriti-logo.svg',
+    body: body,
+    icon: '/smriti-logo.svg', // Ensure this file exists in public/
     badge: '/smriti-logo.svg',
-    tag: payload.data?.tag || 'smriti-notification',
-    requireInteraction: false,
-    data: payload.data,
+    tag: tag, // Replaces old notification if same ID
+    data: { url: url || 'https://arteccosmriti.netlify.app' },
+    requireInteraction: true // Keeps notification visible until clicked
   };
 
-  return self.registration.showNotification(notificationTitle, notificationOptions);
+  return self.registration.showNotification(title, notificationOptions);
 });
 
-// Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
-  console.log('Notification clicked:', event);
   event.notification.close();
+  const urlToOpen = event.notification.data?.url || 'https://arteccosmriti.netlify.app';
 
   event.waitUntil(
-    clients.openWindow('/')
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // Focus existing tab if open
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url.includes('arteccosmriti.netlify.app') && 'focus' in client) {
+          return client.focus().then(c => 'navigate' in c ? c.navigate(urlToOpen) : null);
+        }
+      }
+      // Otherwise open new
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
   );
 });

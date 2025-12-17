@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
@@ -13,7 +13,6 @@ import Auth from './pages/Auth';
 import { ThemeProvider } from './context/ThemeContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { NotificationManager } from './utils/notifications';
 import { useTheme } from './context/ThemeContext';
 
 const PrivateRoute = ({ children }) => {
@@ -25,17 +24,8 @@ const AppContent = () => {
   const { currentUser } = useAuth();
   const { theme } = useTheme();
   
-  useEffect(() => {
-    if (currentUser) {
-      NotificationManager.requestPermission();
-      NotificationManager.startListening();
-    }
-
-    return () => {
-      NotificationManager.stopListening();
-    };
-  }, [currentUser]);
-
+  // NOTE: Notification logic is now handled automatically in AuthContext.js
+  
   return (
     <div className="min-h-screen bg-transparent text-gray-900 dark:text-gray-100">
 
@@ -55,16 +45,16 @@ const AppContent = () => {
         </Routes>
       </main>
       <Toaster
-    position="bottom-center"
-    toastOptions={{
-      duration: 3000,
-      style: {
-        background: theme === 'dark' ? '#000' : '#fff',
-        color: theme === 'dark' ? '#fff' : '#000',
-        border: theme === 'dark' ? '1px solid #333' : '1px solid #e5e7eb',
-      },
-    }}
-  />
+        position="bottom-center"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: theme === 'dark' ? '#191919' : '#fff',
+            color: theme === 'dark' ? '#fff' : '#000',
+            border: theme === 'dark' ? '1px solid #333' : '1px solid #e5e7eb',
+          },
+        }}
+      />
     </div>
   );
 };

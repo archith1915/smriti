@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
-import { collection, getDocs, deleteDoc, doc, orderBy, query, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, orderBy, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -13,12 +13,42 @@ const Journals = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // --- LIVE LISTENER ---
   useEffect(() => {
-    if (currentUser) {
-      loadJournals();
-    }
+    if (!currentUser) return;
+
+    setLoading(true);
+    
+    // 1. Define Query
+    const journalsRef = collection(db, 'journals');
+    const q = query(
+      journalsRef,
+      where('userId', '==', currentUser.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    // 2. Start Listener
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const journalsList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      
+      setJournals(journalsList);
+      // We don't setFilteredJournals here directly, because the 
+      // useEffect below handles filtering whenever 'journals' changes.
+      setLoading(false);
+    }, (error) => {
+      console.error('Error listening to journals:', error);
+      toast.error('Failed to sync journals');
+      setLoading(false);
+    });
+
+    // 3. Cleanup
+    return () => unsubscribe();
   }, [currentUser]);
 
+  // --- FILTERING ---
   useEffect(() => {
     if (searchTerm) {
       const filtered = journals.filter(
@@ -32,35 +62,10 @@ const Journals = () => {
     }
   }, [searchTerm, journals]);
 
-  const loadJournals = async () => {
-    try {
-      setLoading(true);
-      const journalsRef = collection(db, 'journals');
-      const q = query(
-        journalsRef,
-        where('userId', '==', currentUser.uid),
-        orderBy('createdAt', 'desc')
-      );
-      const snapshot = await getDocs(q);
-      const journalsList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setJournals(journalsList);
-      setFilteredJournals(journalsList);
-    } catch (error) {
-      console.error('Error loading journals:', error);
-      toast.error('Failed to load journals');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleDelete = async (id) => {
     if (window.confirm('Delete this journal?')) {
       try {
         await deleteDoc(doc(db, 'journals', id));
-        setJournals(journals.filter(j => j.id !== id));
         toast.success('Journal deleted');
       } catch (error) {
         console.error('Error deleting journal:', error);

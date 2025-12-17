@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
-import { doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import ReactMarkdown from 'react-markdown';
 import toast from 'react-hot-toast';
@@ -14,35 +14,42 @@ const JournalView = () => {
   const [journal, setJournal] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // --- LIVE DOCUMENT LISTENER ---
   useEffect(() => {
-    if (currentUser) {
-      loadJournal();
-    }
-  }, [id, currentUser]);
+    if (!currentUser || !id) return;
 
-  const loadJournal = async () => {
-    try {
-      const docRef = doc(db, 'journals', id);
-      const docSnap = await getDoc(docRef);
+    setLoading(true);
+    const docRef = doc(db, 'journals', id);
+
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        
+        // Security check
         if (data.userId !== currentUser.uid) {
           toast.error('Unauthorized');
           navigate('/journals');
           return;
         }
+        
         setJournal({ id: docSnap.id, ...data });
       } else {
-        toast.error('Journal not found');
-        navigate('/journals');
+        // Document deleted or doesn't exist
+        // Only show error if we weren't the ones who just deleted it (loading check helps)
+        if (!loading) { 
+            // Optional: toast.error('Journal not found');
+            // navigate('/journals');
+        }
       }
-    } catch (error) {
-      console.error('Error loading journal:', error);
-      toast.error('Failed to load journal');
-    } finally {
       setLoading(false);
-    }
-  };
+    }, (error) => {
+      console.error("Error fetching journal:", error);
+      toast.error("Failed to load journal");
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [id, currentUser, navigate]);
 
   const handleDelete = async () => {
     if (window.confirm('Delete this journal? This cannot be undone.')) {

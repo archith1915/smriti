@@ -1,7 +1,13 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  enableIndexedDbPersistence,
+  initializeFirestore, 
+  CACHE_SIZE_UNLIMITED 
+} from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAr6Dvv6kNHhn75sAQ9PC9fhybhZqvfkUU",
@@ -14,18 +20,25 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
-export const db = getFirestore(app);
-export const auth = getAuth(app);
+// Initialize Firestore with settings
+const db = initializeFirestore(app, {
+  cacheSizeBytes: CACHE_SIZE_UNLIMITED
+});
 
-let messaging = null;
-try {
-  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-    messaging = getMessaging(app);
+// Enable Offline Persistence
+enableIndexedDbPersistence(db).catch((err) => {
+  if (err.code == 'failed-precondition') {
+    // Multiple tabs open, persistence can only be enabled in one tab at a a time.
+    console.log("Persistence failed: Multiple tabs open.");
+  } else if (err.code == 'unimplemented') {
+    // The current browser does not support all of the features required to enable persistence
+    console.log("Persistence not supported by browser.");
   }
-} catch (error) {
-  console.log('FCM not supported:', error);
-}
+});
 
-export { messaging, getToken, onMessage };
-export default app;
+const storage = getStorage(app);
+const messaging = getMessaging(app);
+
+export { auth, db, storage, messaging, getToken, onMessage };

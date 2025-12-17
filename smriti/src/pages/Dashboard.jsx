@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import StreakStats from '../components/StreakStats';
 import StreakCalendar from '../components/StreakCalendar';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { format } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
+
+const formatStatus = (status = '') => {
+    return status
+      .replace('-', ' ')
+      .replace(/\b\w/g, char => char.toUpperCase());
+  };
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
@@ -15,53 +21,55 @@ const Dashboard = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
 
   useEffect(() => {
-    if (currentUser) {
-      loadDashboardData();
-    }
+    if (!currentUser) return;
+
+    const userId = currentUser.uid;
+    const today = format(new Date(), 'yyyy-MM-dd');
+
+    // 1. Live Recent Journals
+    const journalsRef = collection(db, 'journals');
+    const journalsQuery = query(
+      journalsRef,
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc'),
+      limit(3)
+    );
+    const unsubJournals = onSnapshot(journalsQuery, (snapshot) => {
+      setRecentJournals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    // 2. Live Today's Tasks
+    const tasksRef = collection(db, 'tasks');
+    const tasksQuery = query(
+      tasksRef,
+      where('userId', '==', userId),
+      where('dueDate', '==', today),
+      where('status', '!=', 'completed')
+    );
+    const unsubTasks = onSnapshot(tasksQuery, (snapshot) => {
+      setTodayTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    // 3. Live Upcoming Events
+    const eventsRef = collection(db, 'events');
+    const eventsQuery = query(
+      eventsRef,
+      where('userId', '==', userId),
+      where('date', '>=', today),
+      orderBy('date'),
+      limit(3)
+    );
+    const unsubEvents = onSnapshot(eventsQuery, (snapshot) => {
+      setUpcomingEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    // Cleanup all listeners
+    return () => {
+      unsubJournals();
+      unsubTasks();
+      unsubEvents();
+    };
   }, [currentUser]);
-
-  const loadDashboardData = async () => {
-    try {
-      const userId = currentUser.uid;
-
-      // Load recent journals
-      const journalsRef = collection(db, 'journals');
-      const journalsQuery = query(
-        journalsRef,
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      );
-      const journalsSnapshot = await getDocs(journalsQuery);
-      setRecentJournals(journalsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
-      // Load today's tasks
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const tasksRef = collection(db, 'tasks');
-      const tasksQuery = query(
-        tasksRef,
-        where('userId', '==', userId),
-        where('dueDate', '==', today),
-        where('status', '!=', 'completed')
-      );
-      const tasksSnapshot = await getDocs(tasksQuery);
-      setTodayTasks(tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
-      // Load upcoming events
-      const eventsRef = collection(db, 'events');
-      const eventsQuery = query(
-        eventsRef,
-        where('userId', '==', userId),
-        where('date', '>=', today),
-        orderBy('date'),
-        limit(5)
-      );
-      const eventsSnapshot = await getDocs(eventsQuery);
-      setUpcomingEvents(eventsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    }
-  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -120,10 +128,10 @@ const Dashboard = () => {
                       <div className="flex items-center space-x-2 ml-3">
                         <span className="text-xs px-2 py-0.5 rounded" style={{
                           backgroundColor: journal.mood === '😊 Happy' ? '#dcfce7' :
-                                         journal.mood === '😌 Calm' ? '#dbeafe' :
-                                         journal.mood === '😔 Sad' ? '#fef3c7' :
-                                         journal.mood === '😰 Anxious' ? '#fee2e2' :
-                                         '#f3f4f6',
+                                           journal.mood === '😌 Calm' ? '#dbeafe' :
+                                           journal.mood === '😔 Sad' ? '#fef3c7' :
+                                           journal.mood === '😰 Anxious' ? '#fee2e2' :
+                                           '#f3f4f6',
                           color: '#000'
                         }}>
                           {journal.mood?.split(' ')[0]}
@@ -161,7 +169,7 @@ const Dashboard = () => {
                         backgroundColor: task.status === 'in-progress' ? '#dbeafe' : '#f3f4f6',
                         color: '#000'
                       }}>
-                        {task.status}
+                        {formatStatus(task.status)}
                       </span>
                     </div>
                   </div>

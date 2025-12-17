@@ -101,8 +101,10 @@ const Auth = () => {
             onClick={() => setIsLogin(!isLogin)}
             className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
           >
-            {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+            {/* {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'} */}
+            
           </button>
+          <span className='text-gray-500'><strong>Smriti</strong> is currently invite only.</span>
         </div>
       </div>
     </div>

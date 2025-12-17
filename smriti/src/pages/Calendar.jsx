@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Edit2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Edit2, Download } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, addDays, addWeeks, isWithinInterval } from 'date-fns';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import toast from 'react-hot-toast';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
+import { jsPDF } from 'jspdf';
 
 const Calendar = () => {
   const { currentUser } = useAuth();
@@ -27,40 +28,47 @@ const Calendar = () => {
     recurringEndDate: '',
   });
 
+  const [jumpMonth, setJumpMonth] = useState(currentDate.getMonth());
+  const [jumpYear, setJumpYear] = useState(currentDate.getFullYear());
+
+  // --- LIVE DATA LISTENERS ---
   useEffect(() => {
-    if (currentUser) {
-      loadData();
-    }
-  }, [currentDate, currentUser]);
+    if (!currentUser) return;
 
-  const loadData = async () => {
-    try {
-      const userId = currentUser.uid;
+    const userId = currentUser.uid;
 
-      // Load events
-      const eventsRef = collection(db, 'events');
-      const eventsQuery = query(eventsRef, where('userId', '==', userId));
-      const eventsSnapshot = await getDocs(eventsQuery);
-      const eventsList = eventsSnapshot.docs.map(doc => ({
+    // 1. Events Listener
+    const eventsQuery = query(collection(db, 'events'), where('userId', '==', userId));
+    const unsubEvents = onSnapshot(eventsQuery, (snapshot) => {
+      const list = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         type: 'event',
       }));
-      setEvents(eventsList);
+      setEvents(list);
+    }, (error) => console.error("Events sync error:", error));
 
-      // Load tasks with dates
-      const tasksRef = collection(db, 'tasks');
-      const tasksQuery = query(tasksRef, where('userId', '==', userId));
-      const tasksSnapshot = await getDocs(tasksQuery);
-      const tasksList = tasksSnapshot.docs
+    // 2. Tasks Listener
+    const tasksQuery = query(collection(db, 'tasks'), where('userId', '==', userId));
+    const unsubTasks = onSnapshot(tasksQuery, (snapshot) => {
+      const list = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data(), type: 'task' }))
-        .filter(task => task.dueDate);
-      setTasks(tasksList);
-    } catch (error) {
-      console.error('Error loading calendar data:', error);
-      toast.error('Failed to load calendar data');
-    }
-  };
+        .filter(task => task.dueDate); // Filter client-side or use a composite index
+      setTasks(list);
+    }, (error) => console.error("Tasks sync error:", error));
+
+    // Cleanup
+    return () => {
+      unsubEvents();
+      unsubTasks();
+    };
+  }, [currentUser]); // Run only on mount/user change
+
+  // Sync Jump controls
+  useEffect(() => {
+    setJumpMonth(currentDate.getMonth());
+    setJumpYear(currentDate.getFullYear());
+  }, [currentDate]);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -70,6 +78,11 @@ const Calendar = () => {
 
   const previousMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+
+  const handleJump = () => {
+    const newDate = new Date(jumpYear, jumpMonth, 1);
+    setCurrentDate(newDate);
+  };
 
   const getRecurringEventDates = (event, targetMonth) => {
     if (event.recurring === 'none') {
@@ -89,7 +102,6 @@ const Calendar = () => {
         dates.push(format(currentEventDate, 'yyyy-MM-dd'));
       }
 
-      // Calculate next occurrence
       if (event.recurring === 'daily') {
         currentEventDate = addDays(currentEventDate, event.recurringInterval || 1);
       } else if (event.recurring === 'weekly') {
@@ -97,6 +109,12 @@ const Calendar = () => {
       } else if (event.recurring === 'monthly') {
         const nextMonth = currentEventDate.getMonth() + (event.recurringInterval || 1);
         currentEventDate = new Date(currentEventDate.getFullYear(), nextMonth, currentEventDate.getDate());
+      } else if (event.recurring === 'yearly') {
+        currentEventDate = new Date(
+          currentEventDate.getFullYear() + (event.recurringInterval || 1),
+          currentEventDate.getMonth(),
+          currentEventDate.getDate()
+        );
       }
     }
 
@@ -117,6 +135,108 @@ const Calendar = () => {
 
   const handleDateClick = (date) => {
     setSelectedDate(date);
+  };
+
+  // 🎨 PDF GENERATOR
+  const downloadPDF = () => {
+    if (!selectedDate) return;
+
+    try {
+      const doc = new jsPDF();
+      const items = getItemsForDate(selectedDate);
+      const dateStr = format(selectedDate, 'EEEE, MMMM d, yyyy');
+
+      // --- HEADER ---
+      doc.setFillColor(26, 26, 26);
+      doc.rect(0, 0, 210, 30, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text("Daily Schedule", 15, 18);
+      
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text(dateStr, 15, 25);
+      
+      doc.setFontSize(10);
+      doc.text("Smriti App", 180, 18);
+
+      // --- CONTENT ---
+      let yPos = 45;
+      const pageHeight = doc.internal.pageSize.height;
+      const margin = 15;
+      const cardWidth = 180;
+
+      if (items.length === 0) {
+        doc.setTextColor(100);
+        doc.setFontSize(12);
+        doc.text("No events or tasks scheduled for this day.", margin, yPos);
+      } else {
+        items.sort((a, b) => {
+            const timeA = a.time || a.dueTime || '00:00';
+            const timeB = b.time || b.dueTime || '00:00';
+            return timeA.localeCompare(timeB);
+        });
+
+        items.forEach((item) => {
+          const isTask = item.type === 'task';
+          const title = item.title;
+          const time = item.time || item.dueTime || 'All Day';
+          const category = (item.category || 'General').toUpperCase();
+          const desc = item.description || 'No description provided.';
+          
+          doc.setFontSize(10);
+          const descLines = doc.splitTextToSize(desc, cardWidth - 10);
+          const cardHeight = 25 + (descLines.length * 5);
+
+          if (yPos + cardHeight > pageHeight - 20) {
+            doc.addPage();
+            yPos = 20;
+          }
+
+          if (isTask) {
+             doc.setFillColor(255, 251, 235);
+             doc.setDrawColor(245, 158, 11); 
+          } else {
+             doc.setFillColor(239, 246, 255);
+             doc.setDrawColor(59, 130, 246);
+          }
+
+          doc.roundedRect(margin, yPos, cardWidth, cardHeight, 2, 2, 'FD');
+
+          doc.setFillColor(isTask ? 245 : 59, isTask ? 158 : 130, isTask ? 11 : 246);
+          doc.rect(margin, yPos, 2, cardHeight, 'F');
+
+          doc.setTextColor(80);
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "bold");
+          doc.text(time, margin + 6, yPos + 8);
+
+          doc.setFontSize(8);
+          doc.setFont("helvetica", "normal");
+          doc.text(category, margin + cardWidth - 5, yPos + 8, { align: 'right' });
+
+          doc.setTextColor(0);
+          doc.setFontSize(13);
+          doc.setFont("helvetica", "bold");
+          doc.text(title, margin + 6, yPos + 16);
+
+          doc.setTextColor(100);
+          doc.setFontSize(10);
+          doc.setFont("helvetica", "normal");
+          doc.text(descLines, margin + 6, yPos + 22);
+
+          yPos += cardHeight + 8;
+        });
+      }
+
+      doc.save(`Schedule_${format(selectedDate, 'yyyy-MM-dd')}.pdf`);
+      toast.success('Schedule downloaded');
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast.error('Failed to download PDF');
+    }
   };
 
   const openModal = (event = null, date = null) => {
@@ -177,6 +297,7 @@ const Calendar = () => {
         recurringInterval: formData.recurringInterval,
         recurringEndDate: formData.recurringEndDate,
         userId: currentUser.uid,
+        notificationSent: false,
         updatedAt: serverTimestamp(),
       };
 
@@ -188,8 +309,6 @@ const Calendar = () => {
         await addDoc(collection(db, 'events'), eventData);
         toast.success('Event created');
       }
-
-      loadData();
       closeModal();
     } catch (error) {
       console.error('Error saving event:', error);
@@ -207,8 +326,6 @@ const Calendar = () => {
           await deleteDoc(doc(db, 'tasks', item.id));
           toast.success('Task deleted');
         }
-        loadData();
-        setSelectedDate(null);
       } catch (error) {
         console.error('Error deleting item:', error);
         toast.error('Failed to delete item');
@@ -233,28 +350,59 @@ const Calendar = () => {
         {/* Calendar */}
         <div className="lg:col-span-2 card p-4">
           {/* Calendar Header */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 space-y-2">
             <h2 className="text-base font-semibold">
               {format(currentDate, 'MMMM yyyy')}
             </h2>
-            <div className="flex items-center space-x-2">
+
+            <div className="flex items-center justify-center gap-1 bg-white/60 dark:bg-[#191919] rounded-lg p-1 mx-auto">
               <button
                 onClick={previousMonth}
-                className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="flex items-center justify-center w-9 h-9 rounded-md hover:bg-white dark:hover:bg-black/40 transition"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-5 h-5" />
               </button>
+
               <button
                 onClick={() => setCurrentDate(new Date())}
-                className="px-3 py-1.5 text-xs rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="flex items-center justify-center h-9 px-4 text-sm font-medium rounded-md hover:bg-white dark:hover:bg-black/40 transition"
               >
-                Today
+                Current month
               </button>
+
               <button
                 onClick={nextMonth}
-                className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="flex items-center justify-center w-9 h-9 rounded-md hover:bg-white dark:hover:bg-black/40 transition"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={jumpMonth}
+                onChange={(e) => setJumpMonth(Number(e.target.value))}
+                className="flex-1 text-xs px-2.5 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#191919] focus:outline-none"
+              >
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <option key={i} value={i}>
+                    {format(new Date(2025, i, 1), 'MMM')}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="number"
+                value={jumpYear}
+                onChange={(e) => setJumpYear(Number(e.target.value))}
+                className="w-24 text-xs px-2.5 py-1.5 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#191919] focus:outline-none"
+              />
+
+              <button
+                onClick={handleJump}
+                className="px-3 py-1.5 text-xs rounded bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
+              >
+                Go
               </button>
             </div>
           </div>
@@ -275,6 +423,7 @@ const Calendar = () => {
             ))}
             {daysInMonth.map(date => {
               const items = getItemsForDate(date);
+              const eventItems = items.filter(i => i.type === 'event');
               const isCurrentDay = isSameDay(date, new Date());
               const isSelected = selectedDate && isSameDay(date, selectedDate);
 
@@ -292,16 +441,12 @@ const Calendar = () => {
                 >
                   <div className="flex flex-col items-center justify-center h-full">
                     <span>{format(date, 'd')}</span>
-                    {items.length > 0 && (
+                    {eventItems.length > 0 && (
                       <div className="flex gap-0.5 mt-0.5">
-                        {items.slice(0, 3).map((item, idx) => (
+                        {eventItems.slice(0, 3).map((item, idx) => (
                           <div
                             key={idx}
-                            className={`w-1 h-1 rounded-full ${
-                              item.type === 'event'
-                                ? 'bg-blue-500'
-                                : 'bg-green-500'
-                            }`}
+                            className="w-1 h-1 rounded-full bg-blue-500"
                           />
                         ))}
                       </div>
@@ -316,11 +461,22 @@ const Calendar = () => {
         {/* Selected Date Details */}
         <div className="space-y-3">
           <div className="card p-4">
-            <h3 className="text-sm font-semibold mb-3">
-              {selectedDate
-                ? format(selectedDate, 'EEEE, MMMM d')
-                : 'Select a date'}
-            </h3>
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-sm font-semibold">
+                {selectedDate
+                  ? format(selectedDate, 'EEEE, MMMM d')
+                  : 'Select a date'}
+              </h3>
+              {selectedDate && (
+                <button 
+                  onClick={downloadPDF}
+                  className="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                  title="Download Schedule as PDF"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+              )}
+            </div>
 
             {selectedDate && (
               <>
@@ -359,9 +515,16 @@ const Calendar = () => {
                             </button>
                           </div>
                         </div>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800">
-                          {item.category}
-                        </span>
+                        <div className="flex items-center gap-2 mt-1">
+                          {item.type === 'task' && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 font-medium border border-amber-200 dark:border-amber-800">
+                              Task
+                            </span>
+                          )}
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800">
+                            {item.category}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -458,6 +621,7 @@ const Calendar = () => {
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
                     <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
                   </select>
                 </div>
                 {formData.recurring !== 'none' && (

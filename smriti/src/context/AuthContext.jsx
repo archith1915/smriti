@@ -6,6 +6,7 @@ import {
   signOut, 
   onAuthStateChanged 
 } from 'firebase/auth';
+import { NotificationManager } from '../utils/notifications';
 
 const AuthContext = createContext();
 
@@ -25,6 +26,12 @@ export const AuthProvider = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setLoading(false);
+
+      // ✅ TRIGGER PERMISSION ON LOGIN
+      // This ensures the token is saved with the correct User ID
+      if (user) {
+        NotificationManager.requestPermission(user.uid);
+      }
     });
 
     return unsubscribe;

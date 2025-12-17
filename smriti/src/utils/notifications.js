@@ -1,18 +1,22 @@
 import { db, messaging, getToken, onMessage } from '../firebase/config';
-import { collection, query, where, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
-import { format, isToday, isTomorrow, parseISO } from 'date-fns';
+import { doc, setDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 class NotificationManagerClass {
   constructor() {
     this.permission = 'default';
-    this.checkInterval = null;
     this.fcmToken = null;
+    this.isListening = false;
   }
 
-  async requestPermission() {
+  async requestPermission(userId) {
     if (!('Notification' in window)) {
       console.log('This browser does not support notifications');
+      return;
+    }
+
+    if (!userId) {
+      console.log('Notification setup skipped: No User ID');
       return;
     }
 
@@ -20,243 +24,73 @@ class NotificationManagerClass {
     
     if (this.permission === 'granted' && messaging) {
       try {
-        // Register service worker
+        // Explicitly register the service worker to avoid path issues
         const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        console.log('Service Worker registered:', registration);
-
-        // Get FCM token
+        
+        // Get the token using the VAPID key
         this.fcmToken = await getToken(messaging, {
-          vapidKey: 'BHLLKgL6s9yMrkSB18Uy12vWguUemVI2nC3rjaYAbiHQjKZ7O-Hcm8bxqdJTAWok9Komtl8f9JWLdWUls4TuGrM', // We'll get this from Firebase Console
+          vapidKey: 'BHLLKgL6s9yMrkSB18Uy12vWguUemVI2nC3rjaYAbiHQjKZ7O-Hcm8bxqdJTAWok9Komtl8f9JWLdWUls4TuGrM', 
           serviceWorkerRegistration: registration,
         });
 
         if (this.fcmToken) {
-          console.log('FCM Token:', this.fcmToken);
-          // Save token to Firestore
-          await this.saveFCMToken(this.fcmToken);
+          console.log('FCM Token generated');
+          // Save the token linked to the specific USER ID
+          await this.saveFCMToken(userId, this.fcmToken);
           
-          // Listen for foreground messages
-          onMessage(messaging, (payload) => {
-            console.log('Foreground message received:', payload);
-            this.showNotification(
-              payload.notification.title,
-              payload.notification.body,
-              payload.data?.tag
-            );
-          });
+          // Start listening for messages while the app is open
+          this.listenForForeground();
         }
       } catch (error) {
-        console.error('Error getting FCM token:', error);
+        console.error('Error setting up notifications:', error);
       }
     }
   }
 
-  async saveFCMToken(token) {
+  async saveFCMToken(userId, token) {
     try {
-      await setDoc(doc(db, 'fcmTokens', 'userToken'), {
+      // We save the document with the ID as the userId
+      // This allows the backend to find it easily: db.collection('fcmTokens').doc(userId)
+      await setDoc(doc(db, 'fcmTokens', userId), {
         token,
+        userId: userId, // Explicitly saving userId as a field too for query safety
         updatedAt: new Date(),
+        device: navigator.userAgent
       });
+      console.log('Token saved to Firestore for user:', userId);
     } catch (error) {
       console.error('Error saving FCM token:', error);
     }
   }
 
-  showNotification(title, body, tag = 'smriti') {
-    if (this.permission === 'granted') {
-      try {
-        new Notification(title, {
-          body,
-          icon: '/smriti-logo.svg',
-          badge: '/smriti-logo.svg',
-          tag,
-          requireInteraction: false,
-        });
-      } catch (error) {
-        console.log('Notification error:', error);
-      }
-    }
-    // Also show toast
-    toast(body, { icon: '🔔' });
-  }
+  listenForForeground() {
+    if (this.isListening) return;
 
-  async checkJournalStreak() {
-    try {
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const journalsRef = collection(db, 'journals');
-      const q = query(journalsRef, where('date', '==', today));
-      const snapshot = await getDocs(q);
+    onMessage(messaging, (payload) => {
+      console.log('🔥 Foreground Message:', payload);
+      const { title, body } = payload.notification;
 
-      if (snapshot.empty) {
-        const now = new Date();
-        const currentHour = now.getHours();
-        
-        // Check settings for reminder time
-        const settingsDoc = await getDoc(doc(db, 'settings', 'userSettings'));
-        let reminderHour = 21; // Default 9 PM
-        
-        if (settingsDoc.exists()) {
-          const reminderTime = settingsDoc.data().journalReminderTime || '21:00';
-          reminderHour = parseInt(reminderTime.split(':')[0]);
-        }
-        
-        // Remind at set time if not written
-        if (currentHour >= reminderHour) {
-          this.showNotification(
-            '📝 Journal Reminder',
-            "Don't forget to write your journal today! Keep your streak going! 🔥",
-            'journal-reminder'
-          );
-        }
-      }
-    } catch (error) {
-      console.error('Error checking journal streak:', error);
-    }
-  }
+      // 1. Force a System Notification (Browser Level) if permission granted
+      // if (Notification.permission === 'granted') {
+      //   new Notification(title, {
+      //     body: body,
+      //     icon: '/smriti-logo.svg',
+      //   });
+      // }
 
-  async checkUpcomingTasks() {
-    try {
-      const now = new Date();
-      const today = format(now, 'yyyy-MM-dd');
-      const tasksRef = collection(db, 'tasks');
-      const q = query(
-        tasksRef,
-        where('status', '!=', 'completed'),
-        where('dueDate', '==', today)
-      );
-      const snapshot = await getDocs(q);
-
-      snapshot.forEach(document => {
-        const task = document.data();
-        if (task.dueTime) {
-          const taskDateTime = parseISO(`${task.dueDate}T${task.dueTime}`);
-          const diffMs = taskDateTime - now;
-          const diffMins = Math.floor(diffMs / 60000);
-
-          // Notify 30 minutes before
-          if (diffMins > 0 && diffMins <= 30) {
-            this.showNotification(
-              '⏰ Task Due Soon',
-              `"${task.title}" is due in ${diffMins} minutes!`,
-              `task-${document.id}`
-            );
-          }
-        }
+      // 2. Show a Toast inside the app (Fallback/Additional UI)
+      toast(body, { 
+        icon: '🔔',
+        duration: 5000,
+        style: {
+          border: '1px solid #333',
+          padding: '16px',
+          color: '#333',
+        },
       });
-    } catch (error) {
-      console.error('Error checking tasks:', error);
-    }
-  }
+    });
 
-  async checkUpcomingEvents() {
-    try {
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const tomorrow = format(new Date(Date.now() + 86400000), 'yyyy-MM-dd');
-      
-      const eventsRef = collection(db, 'events');
-      const snapshot = await getDocs(eventsRef);
-
-      snapshot.forEach(document => {
-        const event = document.data();
-
-        if (event.date === today) {
-          this.showNotification(
-            '📅 Event Today',
-            `"${event.title}" is today${event.time ? ` at ${event.time}` : ''}!`,
-            `event-today-${document.id}`
-          );
-        } else if (event.date === tomorrow) {
-          this.showNotification(
-            '📅 Event Tomorrow',
-            `"${event.title}" is tomorrow${event.time ? ` at ${event.time}` : ''}!`,
-            `event-tomorrow-${document.id}`
-          );
-        }
-      });
-    } catch (error) {
-      console.error('Error checking events:', error);
-    }
-  }
-
-  async checkStreakMotivation() {
-    try {
-      const journalsRef = collection(db, 'journals');
-      const snapshot = await getDocs(query(journalsRef));
-      
-      if (snapshot.size > 0) {
-        const journals = snapshot.docs.map(doc => doc.data());
-        const dates = [...new Set(journals.map(j => j.date))].sort().reverse();
-        
-        // Calculate current streak
-        let streak = 0;
-        const today = format(new Date(), 'yyyy-MM-dd');
-        const yesterday = format(new Date(Date.now() - 86400000), 'yyyy-MM-dd');
-        
-        if (dates[0] === today || dates[0] === yesterday) {
-          let checkDate = new Date();
-          for (let i = 0; i < dates.length; i++) {
-            const expectedDate = format(checkDate, 'yyyy-MM-dd');
-            if (dates[i] === expectedDate) {
-              streak++;
-              checkDate = new Date(checkDate.getTime() - 86400000);
-            } else {
-              break;
-            }
-          }
-        }
-
-        // Motivational milestones
-        if (streak === 7) {
-          this.showNotification(
-            '🎉 7-Day Streak!',
-            'Amazing! You\'ve journaled for a whole week! Keep it up!',
-            'streak-milestone'
-          );
-        } else if (streak === 30) {
-          this.showNotification(
-            '🏆 30-Day Streak!',
-            'Incredible! A month of consistent journaling! You\'re unstoppable!',
-            'streak-milestone'
-          );
-        } else if (streak === 100) {
-          this.showNotification(
-            '👑 100-Day Streak!',
-            'LEGENDARY! 100 days of journaling! You\'re a journaling master!',
-            'streak-milestone'
-          );
-        }
-      }
-    } catch (error) {
-      console.error('Error checking streak motivation:', error);
-    }
-  }
-
-  startListening() {
-    // Check immediately
-    this.checkJournalStreak();
-    this.checkUpcomingTasks();
-    this.checkUpcomingEvents();
-    
-    // Check every 15 minutes
-    this.checkInterval = setInterval(() => {
-      this.checkJournalStreak();
-      this.checkUpcomingTasks();
-      this.checkUpcomingEvents();
-    }, 15 * 60 * 1000);
-
-    // Check streak motivation once per day
-    const checkStreakDaily = () => {
-      this.checkStreakMotivation();
-      // Check again in 24 hours
-      setTimeout(checkStreakDaily, 24 * 60 * 60 * 1000);
-    };
-    checkStreakDaily();
-  }
-
-  stopListening() {
-    if (this.checkInterval) {
-      clearInterval(this.checkInterval);
-    }
+    this.isListening = true;
   }
 }
 

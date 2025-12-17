@@ -143,38 +143,48 @@ const Notes = () => {
       </div>
 
       {/* Notes Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredNotes.map(note => (
-          <div 
-            key={note.id} 
-            onClick={() => openViewModal(note)}
-            className="card p-4 hover:shadow-md transition-shadow group relative cursor-pointer"
+      {/* Notes Grid */}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {filteredNotes.map(note => (
+    <div 
+      key={note.id} 
+      onClick={() => openViewModal(note)}
+      className="card p-4 hover:shadow-md transition-shadow group relative cursor-pointer"
+    >
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="font-semibold text-lg pr-16 text-gray-900 dark:text-gray-100 truncate">{note.title}</h3>
+        
+        {/* Action Buttons - ALWAYS VISIBLE ON MOBILE, HOVER ON DESKTOP */}
+        <div className="flex space-x-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-[#1e1e1e]/80 p-1 rounded-lg backdrop-blur-sm absolute top-4 right-4 z-10">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              openEditModal(e, note);
+            }} 
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300"
+            title="Edit"
           >
-            <h3 className="font-semibold text-lg mb-2 pr-16 text-gray-900 dark:text-gray-100 line-clamp-1">{note.title}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap line-clamp-6">
-              {note.description}
-            </p>
-            
-            {/* Action Buttons */}
-            <div className="absolute top-4 right-4 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-[#1e1e1e]/80 p-1 rounded-lg backdrop-blur-sm">
-              <button 
-                onClick={(e) => openEditModal(e, note)} 
-                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300"
-                title="Edit"
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={(e) => handleDelete(e, note.id)} 
-                className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-500"
-                title="Delete"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        ))}
+            <Edit2 className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(e, note.id);
+            }} 
+            className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-500"
+            title="Delete"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
+      
+      <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap line-clamp-6">
+        {note.description}
+      </p>
+    </div>
+  ))}
+</div>
 
       {/* --- EDIT / CREATE MODAL (Original Compact Style) --- */}
       {showEditModal && (

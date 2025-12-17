@@ -319,7 +319,7 @@ const Tasks = () => {
                     {task.recurring !== 'none' && (
                       <span className="text-[10px] px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 flex items-center gap-1">
                         <RotateCw className="w-2.5 h-2.5" />
-                        {task.recurring}
+                        {formatStatus(task.recurring)}
                       </span>
                     )}
                   </div>

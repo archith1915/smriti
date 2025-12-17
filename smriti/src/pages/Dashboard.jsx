@@ -9,6 +9,12 @@ import { format } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
 import Loader from '../components/Loader';
 
+const formatStatus = (status = '') => {
+    return status
+      .replace('-', ' ')
+      .replace(/\b\w/g, char => char.toUpperCase());
+  };
+
 const Dashboard = () => {
   const { currentUser } = useAuth();
   const [recentJournals, setRecentJournals] = useState([]);
@@ -180,7 +186,7 @@ const Dashboard = () => {
                         backgroundColor: task.status === 'in-progress' ? '#dbeafe' : '#f3f4f6',
                         color: '#000'
                       }}>
-                        {task.status}
+                        {formatStatus(task.status)}
                       </span>
                     </div>
                   </div>

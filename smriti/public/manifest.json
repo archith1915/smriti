@@ -4,13 +4,13 @@
   "description": "A personal journal, task manager, and calendar app for productivity and mental wellness.",
   "icons": [
     {
-      "src": "https://i.ibb.co/ns8y9FMk/smriti-logo.jpg",
+      "src": "https://i.ibb.co/DgM9cyVh/smriti-logo.jpg",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "https://i.ibb.co/ns8y9FMk/smriti-logo.jpg",
+      "src": "https://i.ibb.co/DgM9cyVh/smriti-logo.jpg",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"

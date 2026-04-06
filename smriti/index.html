@@ -9,11 +9,10 @@
     <meta name="keywords" content="journal, task manager, calendar, productivity, ADHD-friendly" />
     <meta name="author" content="Smriti App" />
 
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#191919" media="(prefers-color-scheme: dark)">
+    <meta id="theme-color-meta" name="theme-color" content="#191919">
 
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta id="apple-status-bar-meta" name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <!-- Open Graph -->
     <meta property="og:title" content="Smriti - Personal Journal & Productivity" />
@@ -31,6 +30,26 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+      (function () {
+        const savedTheme = localStorage.getItem('smriti-theme') || 'dark';
+        const isDark = savedTheme === 'dark';
+        const root = document.documentElement;
+        root.classList.toggle('dark', isDark);
+        root.dataset.theme = savedTheme;
+        root.style.colorScheme = savedTheme;
+
+        const themeColorMeta = document.getElementById('theme-color-meta');
+        if (themeColorMeta) {
+          themeColorMeta.setAttribute('content', isDark ? '#191919' : '#ffffff');
+        }
+
+        const appleStatusBarMeta = document.getElementById('apple-status-bar-meta');
+        if (appleStatusBarMeta) {
+          appleStatusBarMeta.setAttribute('content', isDark ? 'black-translucent' : 'default');
+        }
+      })();
+    </script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
       
@@ -71,8 +90,8 @@
       
       /* Minimal card style */
       .card {
-        background: rgba(0, 0, 0, 0.02);
-        border: 1px solid rgba(0, 0, 0, 0.06);
+        background: #ffffff;
+        border: 1px solid #d1d5db;
         border-radius: 4px;
       }
       
@@ -88,7 +107,7 @@
       
       /* Notion-like hover */
       .hover-bg:hover {
-        background-color: rgba(0, 0, 0, 0.03);
+        background-color: #f9fafb;
       }
       
       .dark .hover-bg:hover {

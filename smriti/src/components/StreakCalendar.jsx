@@ -120,7 +120,7 @@ const StreakCalendar = () => {
 
 
   return (
-    <div className="card p-4">
+    <div className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold">Journal Calendar</h3>
         <div className="flex items-center space-x-2">
@@ -170,7 +170,7 @@ const StreakCalendar = () => {
               <div
                 className={`w-full h-full flex items-center justify-center rounded ${getDateColor(status)}`}
               >
-                <span className={status ? 'text-white font-medium' : 'text-gray-600 dark:text-gray-400'}>
+                <span className={status ? 'font-medium' : 'text-gray-600 dark:text-gray-400'}>
                   {format(date, 'd')}
                 </span>
               </div>

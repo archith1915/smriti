@@ -257,7 +257,7 @@ const Tasks = () => {
       </div>
 
       {/* FILTERS */}
-      <div className="card p-3 mb-6">
+      <div className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-3 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="relative bg-white dark:bg-[#191919]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -296,7 +296,7 @@ const Tasks = () => {
 
       {/* TASK LIST */}
       {filteredTasks.length === 0 ? (
-        <div className="text-center py-12 card">
+        <div className="text-center py-12 bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded">
           <p className="text-sm text-gray-500">
             No tasks found
           </p>
@@ -304,7 +304,7 @@ const Tasks = () => {
       ) : (
         <div className="space-y-3">
           {filteredTasks.map(task => (
-            <div key={task.id} className="card p-4 hover-bg">
+            <div key={task.id} className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-4 hover:bg-gray-50 dark:hover:bg-white/5">
               <div className="flex justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex flex-wrap gap-2 mb-2">

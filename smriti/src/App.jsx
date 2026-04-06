@@ -29,10 +29,10 @@ const AppContent = () => {
   // NOTE: Notification logic is now handled automatically in AuthContext.js
   
   return (
-    <div className="min-h-screen bg-transparent text-gray-900 dark:text-gray-100">
+    <div className="min-h-screen bg-white dark:bg-[#191919] text-gray-900 dark:text-gray-100">
 
       {currentUser && <Navbar />}
-      <main className={currentUser ? "pb-6" : ""}>
+      <main className={`min-h-screen bg-white dark:bg-[#191919] ${currentUser ? "pb-6" : ""}`}>
         <Routes>
           <Route path="/auth" element={currentUser ? <Navigate to="/" /> : <Auth />} />
           <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />

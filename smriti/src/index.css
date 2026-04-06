@@ -29,12 +29,37 @@ body {
   animation: fadeIn 0.3s ease-out;
 }
 
+.card {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  outline: 1px solid #cbd5e1;
+  outline-offset: 0;
+  display: block;
+}
+
+html.dark .card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  outline: none;
+}
+
+.hover-bg:hover {
+  background-color: #f9fafb;
+}
+
+html.dark .hover-bg:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
 html {
   background-color: white;
+  color-scheme: light;
 }
 
 html.dark {
   background-color: #191919;
+  color-scheme: dark;
 }
 
 
@@ -89,12 +114,46 @@ html,
 body,
 #root {
   background-color: white;
+  color-scheme: light;
 }
 
 html.dark,
 html.dark body,
 html.dark #root {
   background-color: #191919;
+  color-scheme: dark;
+}
+
+html:not(.dark) .border-gray-100 {
+  border-color: #d1d5db !important;
+}
+
+html:not(.dark) .border-gray-200 {
+  border-color: #bfc7d2 !important;
+}
+
+html:not(.dark) .border-gray-300 {
+  border-color: #aeb8c5 !important;
+}
+
+html:not(.dark) .card {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  outline-color: #cbd5e1 !important;
+}
+
+html:not(.dark) input,
+html:not(.dark) textarea,
+html:not(.dark) select,
+html:not(.dark) option {
+  color-scheme: light;
+}
+
+html.dark input,
+html.dark textarea,
+html.dark select,
+html.dark option {
+  color-scheme: dark;
 }
 
 

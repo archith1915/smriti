@@ -101,7 +101,7 @@ const JournalView = () => {
       </div>
 
       {/* Journal Article */}
-      <article className="card p-6 md:p-8">
+      <article className="p-6 md:p-8">
         {/* Metadata */}
         <div className="flex flex-wrap items-center gap-3 mb-6 pb-6 border-b border-gray-200 dark:border-gray-800">
           <span className="text-sm text-gray-600 dark:text-gray-400">{journal.date}</span>

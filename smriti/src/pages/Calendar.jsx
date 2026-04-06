@@ -370,7 +370,7 @@ const Calendar = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar */}
-        <div className="lg:col-span-2 card p-4">
+        <div className="lg:col-span-2 bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-4">
           {/* Calendar Header */}
           <div className="mb-4 space-y-2">
             <h2 className="text-base font-semibold">
@@ -482,7 +482,7 @@ const Calendar = () => {
 
         {/* Selected Date Details */}
         <div className="space-y-3">
-          <div className="card p-4">
+          <div className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-4">
             <div className="flex justify-between items-start mb-3">
               <h3 className="text-sm font-semibold">
                 {selectedDate
@@ -509,7 +509,7 @@ const Calendar = () => {
                     {getItemsForDate(selectedDate).map((item, idx) => (
                       <div
                         key={`${item.id}-${idx}`}
-                        className="card p-2"
+                        className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-2"
                       >
                         <div className="flex items-start justify-between mb-1">
                           <div className="flex-1 min-w-0">

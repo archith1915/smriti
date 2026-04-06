@@ -106,7 +106,7 @@ const Journals = () => {
       </div>
 
       {/* Search */}
-      <div className="card p-3 mb-6">
+      <div className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-3 mb-6">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
@@ -125,7 +125,7 @@ const Journals = () => {
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
         </div>
       ) : filteredJournals.length === 0 ? (
-        <div className="text-center py-12 card">
+        <div className="text-center py-12 bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded">
           <p className="text-sm text-gray-500 mb-4">
             {searchTerm ? 'No journals found' : 'No journals yet. Start writing!'}
           </p>
@@ -144,7 +144,7 @@ const Journals = () => {
           {filteredJournals.map(journal => (
             <div
               key={journal.id}
-              className="card p-4 hover-bg group"
+              className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-4 hover:bg-gray-50 dark:hover:bg-white/5 group"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">

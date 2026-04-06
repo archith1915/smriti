@@ -18,8 +18,8 @@ import toast from 'react-hot-toast';
 
 const Section = ({ title, children }) => (
   <div className="
-    bg-[#f3f3f1] dark:bg-[#1f1f1f]
-    border border-gray-200 dark:border-[#2a2a2a]
+    bg-white dark:bg-[#1f1f1f]
+    border border-gray-300 dark:border-[#2a2a2a]
     rounded-lg p-6
   ">
     <h2 className="text-lg font-semibold mb-4">{title}</h2>
@@ -33,7 +33,7 @@ const Input = (props) => (
     className="
       w-full px-3 py-2.5 rounded-md
       bg-white dark:bg-[#191919]
-      border border-gray-200 dark:border-[#2a2a2a]
+      border border-gray-300 dark:border-[#2a2a2a]
       outline-none
       focus:border-gray-400 dark:focus:border-gray-500
     "
@@ -290,7 +290,7 @@ const Settings = () => {
 
       {showClearModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#191919] border border-gray-200 dark:border-[#2a2a2a] rounded-lg p-6 w-full max-w-md">
+          <div className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-[#2a2a2a] rounded-lg p-6 w-full max-w-md">
             <h2 className="text-lg font-semibold mb-3 text-red-600">
               Confirm Password
             </h2>

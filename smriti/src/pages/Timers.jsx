@@ -139,7 +139,7 @@ const StopwatchTab = () => {
 // --- SUB-COMPONENT: COUNTDOWNS ---
 const CountdownCard = ({ countdown, onDelete }) => {
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft(new Date(countdown.targetDate)));
-  const [isExpired, setIsExpired] = useState(false);
+  const [isExpired, setIsExpired] = useState(() => isPast(new Date(countdown.targetDate)));
 
   // Update countdown every second
   useEffect(() => {
@@ -147,9 +147,7 @@ const CountdownCard = ({ countdown, onDelete }) => {
       const newTimeLeft = calculateTimeLeft(new Date(countdown.targetDate));
       setTimeLeft(newTimeLeft);
       
-      if (newTimeLeft.expired && !isExpired) {
-        setIsExpired(true);
-      }
+      if (newTimeLeft.expired) setIsExpired(true);
     }, 1000);
 
     return () => clearInterval(interval);
@@ -163,13 +161,15 @@ const CountdownCard = ({ countdown, onDelete }) => {
 
   const targetDate = new Date(countdown.targetDate);
 
+  const expired = isExpired || timeLeft.expired;
+
   return (
-    <div className={`card p-5 relative overflow-hidden group transition-all duration-300 ${
-      isExpired 
+    <div className={`bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-5 relative overflow-hidden group transition-all duration-300 ${
+      expired 
         ? 'border-red-200 dark:border-red-800/50 bg-gradient-to-br from-red-50/50 to-transparent dark:from-red-900/10 dark:to-transparent animate-pulse' 
         : 'hover:border-gray-300 dark:hover:border-gray-600'
     }`}>
-      {isExpired && (
+      {expired && (
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-100/10 to-transparent dark:from-transparent dark:via-red-900/10 dark:to-transparent animate-shimmer" />
       )}
       
@@ -192,7 +192,7 @@ const CountdownCard = ({ countdown, onDelete }) => {
         </button>
       </div>
       
-      {isExpired ? (
+      {expired ? (
         <div className="text-center py-6 relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/30 rounded-full animate-bounce">
             <span className="text-red-600 dark:text-red-400 font-bold">Expired</span>
@@ -404,7 +404,7 @@ const CountdownsTab = () => {
       </div>
 
       {countdowns.length === 0 ? (
-        <div className="card p-8 text-center">
+        <div className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-8 text-center">
           <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
             <Clock className="w-8 h-8 text-gray-400" />
           </div>
@@ -607,7 +607,7 @@ const Timers = () => {
         })}
       </div>
 
-      <div className="card p-4 sm:p-8 min-h-[500px]">
+      <div className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-4 sm:p-8 min-h-[500px]">
         {activeTab === 'timer' && <TimerTab />}
         {activeTab === 'stopwatch' && <StopwatchTab />}
         {activeTab === 'countdowns' && <CountdownsTab />}

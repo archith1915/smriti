@@ -129,7 +129,7 @@ const Notes = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="card p-3 mb-6">
+      <div className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-3 mb-6">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
@@ -149,7 +149,7 @@ const Notes = () => {
     <div 
       key={note.id} 
       onClick={() => openViewModal(note)}
-      className="card p-4 hover:shadow-md transition-shadow group relative cursor-pointer"
+      className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-4 transition-shadow group relative cursor-pointer"
     >
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-semibold text-lg pr-16 text-gray-900 dark:text-gray-100 truncate">{note.title}</h3>

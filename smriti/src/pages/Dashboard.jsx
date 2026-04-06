@@ -119,7 +119,7 @@ const Dashboard = () => {
               </Link>
             </div>
             {recentJournals.length === 0 ? (
-              <div className="card p-8 text-center">
+              <div className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-8 text-center">
                 <p className="text-sm text-gray-500 mb-3">No journals yet. Start writing!</p>
                 <Link
                   to="/journals/new"
@@ -135,7 +135,7 @@ const Dashboard = () => {
                   <Link
                     key={journal.id}
                     to={`/journals/view/${journal.id}`}
-                    className="block card p-3 hover-bg"
+                    className="block bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-3 hover:bg-gray-50 dark:hover:bg-white/5"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
@@ -170,13 +170,13 @@ const Dashboard = () => {
               </Link>
             </div>
             {todayTasks.length === 0 ? (
-              <div className="card p-4 text-center">
+              <div className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-4 text-center">
                 <p className="text-sm text-gray-500">No tasks for today</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {todayTasks.map(task => (
-                  <div key={task.id} className="card p-3">
+                  <div key={task.id} className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <p className="text-sm font-medium">{task.title}</p>
@@ -204,13 +204,13 @@ const Dashboard = () => {
               </Link>
             </div>
             {upcomingEvents.length === 0 ? (
-              <div className="card p-4 text-center">
+              <div className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-4 text-center">
                 <p className="text-sm text-gray-500">No upcoming events</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {upcomingEvents.map(event => (
-                  <div key={event.id} className="card p-3">
+                  <div key={event.id} className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-3">
                     <p className="text-sm font-medium">{event.title}</p>
                     <p className="text-xs text-gray-500 mt-1">{event.date} {event.time && `• ${event.time}`}</p>
                   </div>

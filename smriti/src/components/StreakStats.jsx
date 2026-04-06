@@ -98,7 +98,7 @@ const StreakStats = () => {
   return (
     <div className="space-y-2">
       {statCards.map(({ label, value, color }) => (
-        <div key={label} className="card p-3">
+        <div key={label} className="bg-white dark:bg-[#191919] border border-gray-300 dark:border-gray-800 rounded p-3">
           <div className={`text-2xl font-semibold mb-0.5 ${color}`}>{value}</div>
           <div className="text-xs text-gray-600 dark:text-gray-400">{label}</div>
         </div>
